@@ -1,0 +1,13 @@
+# C++ build artifacts
+*.o
+*.a
+hello_cpp
+rest_api
+
+# Editor / OS files
+.DS_Store
+.vscode/
+.idea/
+
+# Test scratch
+/tmp/zynta_test_json

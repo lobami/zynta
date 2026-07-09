@@ -1,0 +1,5 @@
+# stdlib_demo: a novis snippet that exercises the new dict literal syntax
+# (the zynta stdlib module would import this as a base layer once it lands).
+
+raw: dict = {"name": "alice", "age": 30, "active": true}
+print(raw)

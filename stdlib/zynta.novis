@@ -1,0 +1,39 @@
+# =============================================================================
+# zynta — Novis stdlib module
+# =============================================================================
+# This module is `import`ed by user code to get the zynta framework primitives.
+# It is embedded into novis's module_resolver under the name "std.zynta".
+#
+# Design notes:
+#   * The user-facing API is small: `app := zynta.App()`, `app.get(...)`,
+#     `app.post(...)`, `app.run(host, port)`. Internally these are backed by
+#     a C++ HTTP server (linked into the novis binary via the zynta binding
+#     layer). For now, the stdlib provides a pure-novis implementation that
+#     uses dict literals as the request/response body and a small
+#     `zynta_register_route` builtin that hands the route off to a C++ router.
+#   * `struct` is the Pydantic-style data class: `struct User: name: str`
+#     declares a validator that zynta uses to coerce and verify request
+#     bodies against the schema.
+
+# ---- JSON helpers (pure novis, no C++ required) ---------------------------
+fn zynta_json_parse(s: str) -> dict:
+    return zynta_json_parse_impl(s)
+
+fn zynta_json_stringify(d: dict) -> str:
+    return zynta_json_stringify_impl(d)
+
+# ---- Application object ---------------------------------------------------
+#
+# `zynta.App()` constructs an empty application. Routes are added with
+# `app.get(path, handler)` and `app.post(path, handler)`. The handler is a
+# novis function that takes a `dict` (the parsed request) and returns a
+# `dict` (the response body). The C++ binding layer turns the return value
+# into a JSON HTTP response.
+#
+# Phase 1 limitation: handlers must be synchronous (no `await`). The async
+# handler API is a Phase 2 feature; the C++ side already supports it (we
+# dispatch each request on a worker thread), so the novis API will catch up.
+
+zynta_App_new: int = zynta_app_new()
+print("zynta stdlib ready, app handle = ")
+print(zynta_App_new)
