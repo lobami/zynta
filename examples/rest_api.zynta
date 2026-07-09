@@ -12,6 +12,6 @@ fn create_user(req: dict) -> dict:
     return {"created": req, "status": "ok"}
 
 app: int = zynta_app_new()
-zynta_route(app, "GET", "/users", list_users)
+zynta_route(app, "GET",  "/users", list_users)
 zynta_route(app, "POST", "/users", create_user)
 zynta_run(app, "127.0.0.1", 8080)

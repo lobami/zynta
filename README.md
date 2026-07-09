@@ -36,6 +36,20 @@ zynta dev
 - `.gitignore`
 - `README.md` — your app's readme
 
+## File extensions
+
+Two extensions are in play, one for each language:
+
+- **`.zynta`** — source files for zynta projects (a web app, REST API, etc.)
+  that use `zynta_app_new`, `zynta_route`, `zynta_run`, `zynta_db_query`, etc.
+- **`.novis`** — pure novis programs that don't use the zynta framework
+  (CLI tools, scripts, etc.)
+
+Both extensions are identical under the hood: the novis binary parses the
+file regardless of extension. The split is just for organization — a
+`myapp/app.zynta` is unambiguously a zynta app, while a `tools/cli.novis`
+is clearly a stand-alone novis program.
+
 ## Project layout
 
 ```
