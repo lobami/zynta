@@ -64,34 +64,28 @@ import std.zynta
 struct User:
     name: str
     age: int
-    active: bool = true
+    active: bool
 
-app := zynta.App()
+users: dict = {}
 
-zynta_route(app, "GET", "/users", fn(req):
-    return {"users": [], "count": 0}
-)
+fn list_users(req: dict) -> dict:
+    return {"users": users, "count": 0}
 
-zynta_route(app, "POST", "/users", fn(req):
-    u := zynta_validate(User, req)
-    return {"created": u}
-)
+fn create_user(req: dict) -> dict:
+    return {"created": req, "status": "ok"}
 
-zynta_app_run(app, "127.0.0.1", 8080)
+app: int = zynta_app_new()
+zynta_route(app, "GET",  "/users", list_users)
+zynta_route(app, "POST", "/users", create_user)
+zynta_run(app, "127.0.0.1", 8080)
 ```
 
 The `struct User:` syntax is the novis Pydantic model — already shipped
 in novis as of `feat/NOVIS-0009`. The `dict` literal syntax (`{"a": 1}`)
-is also already in novis. The remaining work for Phase 2 is:
-
-1. Add a handful of builtins to novis (`zynta_app_new`, `zynta_route`,
-   `zynta_app_run`, `zynta_json_parse`, `zynta_json_stringify`).
-2. Link `libzynta.a` into the novis binary so the builtins can reach
-   the C++ server.
-3. Ship a `novis run examples/rest_api.novis` path that does the wiring.
-
-That's a couple hundred lines on top of what exists today. The shape is
-already in `examples/rest_api.novis`; the rest is mechanical.
+is also already in novis. The full link to the zynta C++ server is
+shipped as of `feat/NOVIS-0010`: when the sibling zynta project is
+present, `novis zynta-serve examples/rest_api.novis` starts the server
+and runs the routes. End-to-end curl-tested in the novis test suite.
 
 ## Why not just use Crow / cpp-httplib / Boost.Beast?
 

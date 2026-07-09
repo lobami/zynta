@@ -1,40 +1,17 @@
-# =============================================================================
-# zynta — example REST API written in novis
-# =============================================================================
-# This is what a user-facing zynta application looks like in novis syntax.
-# The actual HTTP server is a C++ binary (see ../examples/rest_api.cpp);
-# this file is the *target* shape for when we wire the novis interpreter
-# into the server (Phase 2).
-
-# Data model — Pydantic-style struct
 struct User:
     name: str
     age: int
-    active: bool = true
+    active: bool
 
-# Application
-app: int = zynta_app_new()
-
-# In-memory store (would be a real DB in production)
-users: dict = []
-
-# Helpers
-fn add_user(name: str, age: int) -> dict:
-    u: dict = {"name": name, "age": age, "active": true}
-    return u
+users: dict = {}
 
 fn list_users(req: dict) -> dict:
-    return {"users": users, "count": 1}
+    return {"users": users, "count": 0}
 
 fn create_user(req: dict) -> dict:
-    if req == null:
-        return {"error": "missing body"}
-    return {"created": req, "id": 1}
+    return {"created": req, "status": "ok"}
 
-# Routes — handlers take a dict (the parsed JSON body) and return a dict
-# (the response body). zynta handles the JSON serialization.
-zynta_route(app, "GET",  "/users", list_users)
+app: int = zynta_app_new()
+zynta_route(app, "GET", "/users", list_users)
 zynta_route(app, "POST", "/users", create_user)
-
-# Run
-zynta_app_run(app, "127.0.0.1", 8080)
+zynta_run(app, "127.0.0.1", 8080)
