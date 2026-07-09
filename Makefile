@@ -19,12 +19,22 @@ CXXFLAGS ?= -std=c++17 -Wall -Wextra -O2 -Iinclude
 NOVIS_DIR ?= ../novis
 NOVIS     ?= $(NOVIS_DIR)/novis
 
+# Optional database drivers. The Makefile auto-detects what's available
+# on the system and compiles the matching source file into the C++ lib
+# so the runtime can dispatch based on the URL scheme (sqlite://, etc.).
+SQLITE_CFLAGS := $(shell pkg-config --cflags sqlite3 2>/dev/null || echo "")
+SQLITE_LIBS   := $(shell pkg-config --libs   sqlite3 2>/dev/null || echo "-lsqlite3")
+PGSQL_CFLAGS  := $(shell pkg-config --cflags libpq  2>/dev/null || echo "-I/opt/homebrew/opt/libpq/include")
+PGSQL_LIBS    := $(shell pkg-config --libs   libpq  2>/dev/null || echo "-L/opt/homebrew/opt/libpq/lib -lpq")
+MYSQL_CFLAGS  := $(shell mysql_config --cflags 2>/dev/null || echo "")
+MYSQL_LIBS    := $(shell mysql_config --libs   2>/dev/null || echo "-lmysqlclient")
+
 .PHONY: all build test clean run-cpp-examples run-novis-examples
 
 all: build
 
 # C++ library (archive) so the future novis-bindings code can link to it.
-build: libzynta.a hello_cpp rest_api
+build: libzynta.a hello_cpp rest_api bin/zynta
 
 # Compile a single .cpp into .o
 %.o: src/%.cpp
@@ -32,8 +42,14 @@ build: libzynta.a hello_cpp rest_api
 
 # Bundle the implementation files into a static library. We use an explicit
 # ar invocation because Make's default ar rule has portability issues.
-libzynta.a: src/zynta_json.o
+libzynta.a: src/zynta_json.o src/zynta_db.o
 	ar rcs $@ $^
+
+# Database helpers — sqlite is the default fallback (no external link
+# required if pkg-config finds it). Postgres and MySQL are added
+# automatically when their headers are present on the system.
+src/zynta_db.o: src/zynta_db.cpp include/zynta_db.h
+	$(CXX) $(CXXFLAGS) $(SQLITE_CFLAGS) $(PGSQL_CFLAGS) $(MYSQL_CFLAGS) -c -o $@ $<
 
 hello_cpp: examples/hello_cpp.cpp include/zynta_http.h include/zynta_json.h include/zynta_value.h src/zynta_json.o
 	$(CXX) $(CXXFLAGS) -o $@ examples/hello_cpp.cpp src/zynta_json.o
@@ -41,26 +57,18 @@ hello_cpp: examples/hello_cpp.cpp include/zynta_http.h include/zynta_json.h incl
 rest_api: examples/rest_api.cpp include/zynta_http.h include/zynta_json.h include/zynta_value.h src/zynta_json.o
 	$(CXX) $(CXXFLAGS) -o $@ examples/rest_api.cpp src/zynta_json.o
 
+# The user-facing `zynta` CLI. Built from src/zynta_cli.cpp; does not
+# link against libzynta because it's just a templating tool that
+# shells out to `novis zynta-serve` for dev mode.
+bin/zynta: src/zynta_cli.cpp
+	@mkdir -p bin
+	$(CXX) $(CXXFLAGS) -o $@ $<
+
 # Tests
 test: build
 	bash tests/run_tests.sh
 
-# C++ examples
-run-cpp-examples: hello_cpp
-	./hello_cpp 127.0.0.1 8765 &
-	HTTP_PID=$$!
-	sleep 0.3
-	curl -s http://127.0.0.1:8765/ && echo
-	curl -s http://127.0.0.1:8765/health && echo
-	kill $$HTTP_PID 2>/dev/null || true
-
-# Novis examples (require ../novis/novis to be built)
-run-novis-examples:
-	@if [ ! -x "$(NOVIS)" ]; then \
-		echo "error: $(NOVIS) not found. Build novis first."; exit 1; \
-	fi
-	@echo "(zynta novis stdlib tests)"
-
 clean:
-	rm -f *.o *.a hello_cpp
+	rm -f *.o *.a hello_cpp rest_api
 	rm -f src/*.o
+	rm -rf bin/
